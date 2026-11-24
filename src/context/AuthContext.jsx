@@ -9,13 +9,16 @@ import api, { setAuthToken } from "../api/axios";
 import { auth } from "../firebase";
 import { AuthContext } from "./AuthContext.js";
 
-const adminEmail = import.meta.env.ADMIN_EMAIL?.trim().toLowerCase();
+const adminEmails = (import.meta.env.ADMIN_EMAIL || "")
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
 
 const isConfiguredAdmin = (firebaseUser) =>
   Boolean(
-    adminEmail &&
+    adminEmails.length &&
       firebaseUser.email &&
-      firebaseUser.email.toLowerCase() === adminEmail
+      adminEmails.includes(firebaseUser.email.toLowerCase())
   );
 
 const unauthorizedError = () => ({
@@ -45,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       try {
         if (!isConfiguredAdmin(firebaseUser)) {
           setError(
-            adminEmail
+            adminEmails.length
               ? "This Google account is not authorized for the admin portal."
               : "Set ADMIN_EMAIL in the admin app environment to enable admin sign-in."
           );
@@ -98,7 +101,7 @@ export const AuthProvider = ({ children }) => {
     const { user: firebaseUser } = await signInWithPopup(auth, provider);
     if (!isConfiguredAdmin(firebaseUser)) {
       setError(
-        adminEmail
+        adminEmails.length
           ? "This Google account is not authorized for the admin portal."
           : "Set ADMIN_EMAIL in the admin app environment to enable admin sign-in."
       );
