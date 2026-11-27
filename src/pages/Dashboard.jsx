@@ -81,7 +81,9 @@ export default function Dashboard() {
       const responseRows =
         activeTab === "posts"
           ? panelResponse.data.recipes
-          : panelResponse.data.users;
+          : activeTab === "users"
+            ? panelResponse.data.users
+            : panelResponse.data.requests;
       setRows(responseRows || []);
       setPages(panelResponse.data.pages || 1);
       setTotal(panelResponse.data.total || 0);
@@ -164,6 +166,25 @@ export default function Dashboard() {
     }
   };
 
+  const reviewAccessRequest = async (request, action) => {
+    setActionId(request._id);
+    setNotice("");
+    setError("");
+    try {
+      await api.patch(`/access-requests/${request._id}`, { action });
+      await refreshAfterAction(
+        `Access request ${action === "approve" ? "approved" : "declined"}.`
+      );
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          "The access request could not be reviewed."
+      );
+    } finally {
+      setActionId("");
+    }
+  };
+
   const submitSearch = (event) => {
     event.preventDefault();
     setPage(1);
@@ -173,6 +194,7 @@ export default function Dashboard() {
   const tabs = [
     { id: "posts", label: "All posts" },
     { id: "users", label: "Users" },
+    { id: "access-requests", label: "Access requests" },
   ];
 
   const openPost = (post) => {
@@ -282,7 +304,9 @@ export default function Dashboard() {
                   placeholder={
                     activeTab === "posts"
                       ? "Search posts or authors"
-                      : "Search users"
+                      : activeTab === "users"
+                        ? "Search users"
+                        : "Search access requests"
                   }
                   className="min-w-0 flex-1 rounded-full border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:border-[#C9A96E] sm:w-64 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:placeholder-neutral-500"
                 />
@@ -432,6 +456,55 @@ export default function Dashboard() {
                           ? "Removing..."
                           : "Remove user"}
                       </button>
+                    </article>
+                  ))}
+                </div>
+              )}
+              {activeTab === "access-requests" && (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {rows.map((request) => (
+                    <article
+                      key={request._id}
+                      className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center"
+                    >
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-50 font-semibold text-amber-700">
+                        {(request.displayName || request.email)
+                          ?.slice(0, 1)
+                          .toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="font-semibold text-slate-900 dark:text-white">
+                          {request.displayName || "Poodiest user"}
+                        </h2>
+                        <p className="mt-1 break-all text-sm text-slate-500 dark:text-slate-400">
+                          {request.email}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                          Requested {formatDate(request.requestedAt)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          type="button"
+                          disabled={actionId === request._id}
+                          onClick={() =>
+                            reviewAccessRequest(request, "decline")
+                          }
+                          className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {actionId === request._id ? "Reviewing..." : "Decline"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionId === request._id}
+                          onClick={() =>
+                            reviewAccessRequest(request, "approve")
+                          }
+                          className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+                        >
+                          {actionId === request._id ? "Reviewing..." : "Accept"}
+                        </button>
+                      </div>
                     </article>
                   ))}
                 </div>
